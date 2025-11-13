@@ -1,6 +1,38 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { SiteSettings, Slide, Notice, Trainer, Student, Course, GalleryItem, Feature, WhyChooseUsItem, TrainingItem, Video } from '../types';
 
+// Custom hook to sync state with localStorage
+function useLocalStorage<T>(key: string, initialValue: T) {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      // Parse stored json or if none return initialValue
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      // If error also return initialValue
+      console.log(error);
+      return initialValue;
+    }
+  });
+
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      // Allow value to be a function so we have same API as useState
+      const valueToStore =
+        value instanceof Function ? value(storedValue) : value;
+      // Save state
+      setStoredValue(valueToStore);
+      // Save to local storage
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      // A more advanced implementation would handle the error case
+      console.log(error);
+    }
+  };
+
+  return [storedValue, setValue] as const;
+}
+
 // --- I18n Translations ---
 const translations = {
     bn: {
@@ -642,15 +674,15 @@ export const AppContext = createContext<AppContextType | null>(null);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [lang, setLang] = useState<Lang>('bn');
     
-    const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
-    const [slides, setSlides] = useState<Slide[]>(initialSlides);
-    const [notices, setNotices] = useState<Notice[]>(initialNotices);
-    const [trainers, setTrainers] = useState<Trainer[]>(initialTrainers);
-    const [students, setStudents] = useState<Student[]>(initialStudents);
-    const [courses, setCourses] = useState<Course[]>(initialCourses);
-    const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(initialGalleryItems);
-    const [trainingItems, setTrainingItems] = useState<TrainingItem[]>(initialTrainingItems);
-    const [videos, setVideos] = useState<Video[]>(initialVideos);
+    const [siteSettings, setSiteSettings] = useLocalStorage<SiteSettings>('wtc-siteSettings', initialSiteSettings);
+    const [slides, setSlides] = useLocalStorage<Slide[]>('wtc-slides', initialSlides);
+    const [notices, setNotices] = useLocalStorage<Notice[]>('wtc-notices', initialNotices);
+    const [trainers, setTrainers] = useLocalStorage<Trainer[]>('wtc-trainers', initialTrainers);
+    const [students, setStudents] = useLocalStorage<Student[]>('wtc-students', initialStudents);
+    const [courses, setCourses] = useLocalStorage<Course[]>('wtc-courses', initialCourses);
+    const [galleryItems, setGalleryItems] = useLocalStorage<GalleryItem[]>('wtc-galleryItems', initialGalleryItems);
+    const [trainingItems, setTrainingItems] = useLocalStorage<TrainingItem[]>('wtc-trainingItems', initialTrainingItems);
+    const [videos, setVideos] = useLocalStorage<Video[]>('wtc-videos', initialVideos);
     
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!sessionStorage.getItem('wtc-auth'));
 
@@ -689,13 +721,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         delete: (id: string) => setState(prev => prev.filter(item => item.id !== id)),
     });
 
-    const { add: addSlide, delete: deleteSlide } = createCrudFunctions(slides, setSlides);
-    const { add: addNotice, update: updateNotice, delete: deleteNotice } = createCrudFunctions(notices, setNotices);
-    const { add: addTrainer, update: updateTrainer, delete: deleteTrainer } = createCrudFunctions(trainers, setTrainers);
-    const { add: addCourse, update: updateCourse, delete: deleteCourse } = createCrudFunctions(courses, setCourses);
-    const { add: addGalleryItem, delete: deleteGalleryItem } = createCrudFunctions(galleryItems, setGalleryItems);
-    const { add: addTrainingItem, update: updateTrainingItem, delete: deleteTrainingItem } = createCrudFunctions(trainingItems, setTrainingItems);
-    const { add: addVideo, update: updateVideo, delete: deleteVideo } = createCrudFunctions(videos, setVideos);
+    const { add: addSlide, delete: deleteSlide } = createCrudFunctions(slides, setSlides as any);
+    const { add: addNotice, update: updateNotice, delete: deleteNotice } = createCrudFunctions(notices, setNotices as any);
+    const { add: addTrainer, update: updateTrainer, delete: deleteTrainer } = createCrudFunctions(trainers, setTrainers as any);
+    const { add: addCourse, update: updateCourse, delete: deleteCourse } = createCrudFunctions(courses, setCourses as any);
+    const { add: addGalleryItem, delete: deleteGalleryItem } = createCrudFunctions(galleryItems, setGalleryItems as any);
+    const { add: addTrainingItem, update: updateTrainingItem, delete: deleteTrainingItem } = createCrudFunctions(trainingItems, setTrainingItems as any);
+    const { add: addVideo, update: updateVideo, delete: deleteVideo } = createCrudFunctions(videos, setVideos as any);
 
     const addStudent = (student: Student) => setStudents(prev => [student, ...prev]);
     const updateStudent = (updatedStudent: Student) => setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
